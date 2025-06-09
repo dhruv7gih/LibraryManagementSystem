@@ -1,189 +1,273 @@
 import javax.swing.*;
+import javax.swing.border.AbstractBorder;
+import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.*;
 import java.sql.*;
+import java.util.prefs.Preferences;
 
 public class LibrarySystemGUI extends JFrame {
 
-    Connection conn;
+    private JPanel contentPanel;
+    private boolean darkMode = false;
+    private Preferences prefs;
+    private static String currentUser = null;
 
     public LibrarySystemGUI() {
-        // DB connection
-        try {
-            conn = DBConnection.getConnection();
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(null, "DB Connection Error: " + e.getMessage());
-            System.exit(1);
-        }
+        prefs = Preferences.userRoot().node(this.getClass().getName());
+        darkMode = prefs.getBoolean("darkMode", false);
 
-        // GUI Setup
         setTitle("Library Management System");
-        setSize(400, 400);
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setLocationRelativeTo(null);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
+        getContentPane().setLayout(new BorderLayout());
 
-        // Buttons
-        JButton loginBtn = new JButton("Login");
-        JButton addBookBtn = new JButton("Add Book");
-        JButton viewBooksBtn = new JButton("View Books");
-        JButton deleteBookBtn = new JButton("Delete Book");
-        JButton issueBookBtn = new JButton("Issue Book");
-        JButton returnBookBtn = new JButton("Return Book");
-        JButton exitBtn = new JButton("Exit");
+        createNavigationBar();
+        contentPanel = new JPanel(new GridLayout(2, 3, 30, 30));
+        contentPanel.setBorder(BorderFactory.createEmptyBorder(30, 30, 30, 30));
+        getContentPane().add(contentPanel, BorderLayout.CENTER);
 
-        // Button Actions
-        loginBtn.addActionListener(e -> login());
-        addBookBtn.addActionListener(e -> addBook());
-        viewBooksBtn.addActionListener(e -> viewBooks());
-        deleteBookBtn.addActionListener(e -> deleteBook());
-        issueBookBtn.addActionListener(e -> issueBook());
-        returnBookBtn.addActionListener(e -> returnBook());
-        exitBtn.addActionListener(e -> System.exit(0));
-
-        // Layout
-        setLayout(new GridLayout(7, 1, 10, 10));
-        add(loginBtn);
-        add(addBookBtn);
-        add(viewBooksBtn);
-        add(deleteBookBtn);
-        add(issueBookBtn);
-        add(returnBookBtn);
-        add(exitBtn);
-
+        createFeatureCards();
+        applyTheme();
         setVisible(true);
     }
 
-    void login() {
-        String username = JOptionPane.showInputDialog(this, "Enter Username:");
-        String password = JOptionPane.showInputDialog(this, "Enter Password:");
+    private void createNavigationBar() {
+        JPanel navBar = new JPanel(new BorderLayout());
+        navBar.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
 
-        try {
-            PreparedStatement pst = conn.prepareStatement("SELECT * FROM users WHERE username=? AND password=?");
-            pst.setString(1, username);
-            pst.setString(2, password);
-            ResultSet rs = pst.executeQuery();
+        JLabel titleLabel = new JLabel("Library Management System");
+        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 24));
+        navBar.add(titleLabel, BorderLayout.WEST);
 
-            if (rs.next()) {
-                JOptionPane.showMessageDialog(this, "Login successful!");
-            } else {
-                JOptionPane.showMessageDialog(this, "Invalid credentials.");
-            }
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Login Error: " + e.getMessage());
+        JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        String[] navItems = {"Home", "About", "Logout"};
+        for (String item : navItems) {
+            JButton btn = createNavButton(item);
+            btn.addActionListener(e -> handleNavAction(item));
+            buttonsPanel.add(btn);
+        }
+
+        JToggleButton themeToggle = new JToggleButton("🌞/🌙");
+        themeToggle.setSelected(darkMode);
+        themeToggle.addActionListener(e -> toggleTheme(themeToggle.isSelected()));
+        buttonsPanel.add(themeToggle);
+
+        navBar.add(buttonsPanel, BorderLayout.EAST);
+        getContentPane().add(navBar, BorderLayout.NORTH);
+    }
+
+    private void createFeatureCards() {
+        Object[][] features = {
+                {"Add Book", "➕", (ActionListener) this::addBook},
+                {"View Books", "📚", (ActionListener) this::viewBooks},
+                {"Delete Book", "❌", (ActionListener) this::deleteBook},
+                {"Issue Book", "📤", (ActionListener) this::issueBook},
+                {"Return Book", "📥", (ActionListener) this::returnBook}
+        };
+        for (Object[] feature : features) {
+            String label = (String) feature[0];
+            String icon = (String) feature[1];
+            ActionListener action = (ActionListener) feature[2];
+            JButton btn = createFeatureButton(label, icon, action);
+            contentPanel.add(btn);
         }
     }
 
-    void addBook() {
-        String title = JOptionPane.showInputDialog(this, "Enter Book Title:");
-        String author = JOptionPane.showInputDialog(this, "Enter Book Author:");
-        String qtyStr = JOptionPane.showInputDialog(this, "Enter Quantity:");
-
-        try {
-            int quantity = Integer.parseInt(qtyStr);
-            PreparedStatement pst = conn.prepareStatement("INSERT INTO books (title, author, quantity) VALUES (?, ?, ?)");
-            pst.setString(1, title);
-            pst.setString(2, author);
-            pst.setInt(3, quantity);
-            pst.executeUpdate();
-
-            JOptionPane.showMessageDialog(this, "Book added successfully!");
-        } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "Invalid quantity. Enter a number.");
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Add Book Error: " + e.getMessage());
-        }
-    }
-    void viewBooks() {
-        try {
-            Statement stmt = conn.createStatement();
-            ResultSet rs = stmt.executeQuery("SELECT * FROM books");
-
-            StringBuilder sb = new StringBuilder("ID\tTitle\tAuthor\tQty\n");
-            while (rs.next()) {
-                sb.append(rs.getInt("id")).append("\t")
-                        .append(rs.getString("title")).append("\t")
-                        .append(rs.getString("author")).append("\t")
-                        .append(rs.getInt("quantity")).append("\n");
-            }
-
-            JTextArea textArea = new JTextArea(sb.toString());
-            textArea.setEditable(false);
-            JOptionPane.showMessageDialog(this, new JScrollPane(textArea), "Books List", JOptionPane.INFORMATION_MESSAGE);
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "View Books Error: " + e.getMessage());
-        }
+    private JButton createNavButton(String text) {
+        JButton btn = new JButton(text);
+        btn.setFont(new Font("SansSerif", Font.PLAIN, 16));
+        btn.setFocusPainted(false);
+        return btn;
     }
 
-    void deleteBook() {
-        String idStr = JOptionPane.showInputDialog(this, "Enter Book ID to delete:");
+    private JButton createFeatureButton(String label, String icon, ActionListener action) {
+        JButton button = new JButton("<html><center>" + icon + "<br>" + label + "</center></html>");
+        button.setFont(new Font("SansSerif", Font.BOLD, 18));
+        button.setPreferredSize(new Dimension(200, 150));
+        button.setBackground(new Color(230, 230, 250));
+        button.setFocusPainted(false);
+        button.setBorder(new RoundedDropShadowBorder(20));
+        button.addActionListener(action);
+        return button;
+    }
 
-        try {
-            int id = Integer.parseInt(idStr);
-            int confirm = JOptionPane.showConfirmDialog(this, "Are you sure you want to delete this book?", "Confirm Delete", JOptionPane.YES_NO_OPTION);
+    private void applyTheme() {
+        Color bgColor = darkMode ? new Color(40, 40, 40) : Color.WHITE;
+        Color fgColor = darkMode ? Color.WHITE : Color.BLACK;
 
-            if (confirm == JOptionPane.YES_OPTION) {
-                PreparedStatement pst = conn.prepareStatement("DELETE FROM books WHERE id=?");
-                pst.setInt(1, id);
-                int rows = pst.executeUpdate();
-
-                if (rows > 0) {
-                    JOptionPane.showMessageDialog(this, "Book deleted successfully.");
-                } else {
-                    JOptionPane.showMessageDialog(this, "Book ID not found.");
-                }
+        contentPanel.setBackground(bgColor);
+        getContentPane().setBackground(bgColor);
+        for (Component c : contentPanel.getComponents()) {
+            if (c instanceof JButton) {
+                JButton b = (JButton) c;
+                b.setForeground(fgColor);
+                b.setBackground(darkMode ? new Color(60, 60, 60) : new Color(230, 230, 250));
             }
-        } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "Invalid ID. Enter a number.");
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Delete Book Error: " + e.getMessage());
+        }
+        repaint();
+    }
+
+    private void toggleTheme(boolean isDark) {
+        darkMode = isDark;
+        prefs.putBoolean("darkMode", darkMode);
+        applyTheme();
+    }
+
+    private void handleNavAction(String item) {
+        switch (item) {
+            case "Logout":
+                currentUser = null;
+                JOptionPane.showMessageDialog(this, "Logged out successfully.");
+                System.exit(0);
+                break;
+            case "About":
+                JOptionPane.showMessageDialog(this, "Modern Library System - Java Swing Edition.");
+                break;
         }
     }
 
-    void issueBook() {
-        String bookIdStr = JOptionPane.showInputDialog(this, "Enter Book ID to issue:");
+    private void addBook(ActionEvent e) {
+        JTextField bookField = new JTextField();
+        JTextField authorField = new JTextField();
+        Object[] fields = {
+                "Book Name:", bookField,
+                "Author:", authorField
+        };
 
-        try {
-            int bookId = Integer.parseInt(bookIdStr);
-            String query = "UPDATE books SET quantity = quantity - 1 WHERE id = ? AND quantity > 0";
-            PreparedStatement pst = conn.prepareStatement(query);
-            pst.setInt(1, bookId);
-            int rows = pst.executeUpdate();
-
-            if (rows > 0) {
-                JOptionPane.showMessageDialog(this, "Book issued successfully.");
-            } else {
-                JOptionPane.showMessageDialog(this, "Book not available or invalid ID.");
+        int option = JOptionPane.showConfirmDialog(this, fields, "Add Book", JOptionPane.OK_CANCEL_OPTION);
+        if (option == JOptionPane.OK_OPTION) {
+            try (Connection conn = getConnection();
+                 PreparedStatement stmt = conn.prepareStatement("INSERT INTO books (bookname, author) VALUES (?, ?)")) {
+                stmt.setString(1, bookField.getText());
+                stmt.setString(2, authorField.getText());
+                stmt.executeUpdate();
+                JOptionPane.showMessageDialog(this, "Book added.");
+            } catch (SQLException ex) {
+                showError(ex);
             }
-        } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "Invalid ID. Enter a number.");
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Issue Book Error: " + e.getMessage());
         }
     }
 
-    void returnBook() {
-        String bookIdStr = JOptionPane.showInputDialog(this, "Enter Book ID to return:");
+    private void viewBooks(ActionEvent e) {
+        try (Connection conn = getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT id, bookname, author, issued_to FROM books")) {
 
-        try {
-            int bookId = Integer.parseInt(bookIdStr);
-            String query = "UPDATE books SET quantity = quantity + 1 WHERE id = ?";
-            PreparedStatement pst = conn.prepareStatement(query);
-            pst.setInt(1, bookId);
-            int rows = pst.executeUpdate();
+            JTable table = new JTable(buildTableModel(rs));
+            JScrollPane scrollPane = new JScrollPane(table);
+            scrollPane.setPreferredSize(new Dimension(600, 300));
+            JOptionPane.showMessageDialog(this, scrollPane, "Books List", JOptionPane.PLAIN_MESSAGE);
 
-            if (rows > 0) {
-                JOptionPane.showMessageDialog(this, "Book returned successfully.");
-            } else {
-                JOptionPane.showMessageDialog(this, "Invalid Book ID.");
+        } catch (SQLException ex) {
+            showError(ex);
+        }
+    }
+
+    private void deleteBook(ActionEvent e) {
+        String bookId = JOptionPane.showInputDialog(this, "Enter Book ID to delete:");
+        if (bookId != null && !bookId.trim().isEmpty()) {
+            try (Connection conn = getConnection();
+                 PreparedStatement stmt = conn.prepareStatement("DELETE FROM books WHERE id = ?")) {
+                stmt.setInt(1, Integer.parseInt(bookId));
+                int deleted = stmt.executeUpdate();
+                JOptionPane.showMessageDialog(this, deleted > 0 ? "Book deleted." : "Book not found.");
+            } catch (SQLException ex) {
+                showError(ex);
             }
-        } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "Invalid ID. Enter a number.");
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Return Book Error: " + e.getMessage());
+        }
+    }
+
+    private void issueBook(ActionEvent e) {
+        String bookId = JOptionPane.showInputDialog(this, "Enter Book ID to issue:");
+        String userId = JOptionPane.showInputDialog(this, "Enter User ID:");
+        if (bookId != null && userId != null) {
+            try (Connection conn = getConnection();
+                 PreparedStatement stmt = conn.prepareStatement("UPDATE books SET issued_to = ? WHERE id = ?")) {
+                stmt.setString(1, userId);
+                stmt.setInt(2, Integer.parseInt(bookId));
+                stmt.executeUpdate();
+                JOptionPane.showMessageDialog(this, "Book issued.");
+            } catch (SQLException ex) {
+                showError(ex);
+            }
+        }
+    }
+
+    private void returnBook(ActionEvent e) {
+        String bookId = JOptionPane.showInputDialog(this, "Enter Book ID to return:");
+        if (bookId != null) {
+            try (Connection conn = getConnection();
+                 PreparedStatement stmt = conn.prepareStatement("UPDATE books SET issued_to = NULL WHERE id = ?")) {
+                stmt.setInt(1, Integer.parseInt(bookId));
+                stmt.executeUpdate();
+                JOptionPane.showMessageDialog(this, "Book returned.");
+            } catch (SQLException ex) {
+                showError(ex);
+            }
+        }
+    }
+
+    private Connection getConnection() throws SQLException {
+        return DriverManager.getConnection("jdbc:mysql://localhost:3306/library", "root", "");
+    }
+
+    private void showError(Exception ex) {
+        ex.printStackTrace();
+        JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+    }
+
+    private DefaultTableModel buildTableModel(ResultSet rs) throws SQLException {
+        ResultSetMetaData meta = rs.getMetaData();
+        int cols = meta.getColumnCount();
+        String[] colNames = new String[cols];
+        for (int i = 1; i <= cols; i++) colNames[i - 1] = meta.getColumnName(i);
+
+        DefaultTableModel model = new DefaultTableModel(colNames, 0);
+        while (rs.next()) {
+            Object[] row = new Object[cols];
+            for (int i = 1; i <= cols; i++) row[i - 1] = rs.getObject(i);
+            model.addRow(row);
+        }
+        return model;
+    }
+
+    private static class RoundedDropShadowBorder extends AbstractBorder {
+        private final int radius;
+
+        public RoundedDropShadowBorder(int radius) {
+            this.radius = radius;
+        }
+
+        @Override
+        public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            g2.setColor(new Color(0, 0, 0, 30));
+            g2.fillRoundRect(x + 2, y + 2, width - 4, height - 4, radius, radius);
+            g2.setColor(c.getBackground());
+            g2.drawRoundRect(x, y, width - 1, height - 1, radius, radius);
+
+            g2.dispose();
+        }
+
+        @Override
+        public Insets getBorderInsets(Component c) {
+            return new Insets(8, 8, 8, 8);
+        }
+
+        @Override
+        public Insets getBorderInsets(Component c, Insets insets) {
+            insets.left = insets.right = insets.top = insets.bottom = 8;
+            return insets;
         }
     }
 
     public static void main(String[] args) {
-        new LibrarySystemGUI();
+        SwingUtilities.invokeLater(() -> {
+            currentUser = "admin"; // Simulate login
+            new LibrarySystemGUI();
+        });
     }
 }

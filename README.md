@@ -1,62 +1,67 @@
-# Library Management System
+# 📚 Library Management System (Java + MySQL + Swing)
 
-This is a Java Swing-based desktop application that helps manage books in a library. It allows users to add, view, delete, issue, and return books. The system uses *MySQL* for the backend database and *JDBC* for database connectivity.
-
----
-
-## Features
-
-- *Login System:* Authenticate users before accessing the system.
-- *Add Book:* Insert new book details into the database.
-- *View Books:* Display a list of all books in the library.
-- *Delete Book:* Remove books using their ID.
-- *Issue Book:* Decrease quantity when a book is issued.
-- *Return Book:* Increase quantity when a book is returned.
-- *Exit Option:* Close the application safely.
+This project is a Java-based Library Management System using *Swing for GUI* and *MySQL for the database. It provides role-based access for **Admin* and *User*, allowing management of books, issuing, returning, and tracking user actions via logs.
 
 ---
 
-## Technologies Used
+## 🚀 Features
 
-- Java (JDK 17+)
-- Java Swing (GUI)
-- MySQL
-- JDBC (Java Database Connectivity)
-- IntelliJ IDEA (Recommended IDE)
+### Admin
+- Add, View, Delete Books
+- Issue and Return Books
+- View Logs
+- Manage Users
+
+### User
+- View and Search Books
+- Issue and Return Books
 
 ---
 
-## Database Configuration
+## 🛠 Tech Stack
 
-1. Create a MySQL database named Librarydb.
-2. Create the following tables:
+- *Language*: Java
+- *GUI*: Java Swing
+- *Database*: MySQL (JDBC)
+- *IDE*: IntelliJ / Eclipse / NetBeans
+- *Version Control*: Git & GitHub
 
-```sql
-CREATE TABLE users (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    username VARCHAR(50),
-    password VARCHAR(50)
-);
+---
 
-CREATE TABLE books (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    title VARCHAR(100),
-    author VARCHAR(100),
-    quantity INT
-);
+## 🗃 Database Schema
+
+- users: stores user credentials and roles
+- - books: holds book details.
+- issued_books: tracks book issuing and returns.
+- logs: records all user actions (login, add, issue, return, etc.)
+
+See [library_schema.sql](./library_schema.sql) for full database setup.
+
+---
+
+## ⚙ Setup Instructions
+
+### 1. Prerequisites
+
+- Java JDK 8 or higher
+- MySQL Server
+- MySQL JDBC Driver (mysql-connector-java)
+- IDE (e.g., IntelliJ, Eclipse)
+- Git
+
 ## Screenshots
 
 ### 1. Add Book
-![Add Book](screenshots/addbook.png)
+![Add Book](screenshots/addbookUI.png)
 
 ### 2. View Books
-![View Books](screenshots/viewbooks.png)
+![View Books](screenshots/viewbooksUI.png)
 
 ### 3. Issue Book
-![Issue Book](screenshots/issuebook.png)
+![Issue Book](screenshots/issuebookUI.png)
 
 ### 4. Return Book
-![Return Book](screenshots/returnbook.png)
+![Return Book](screenshots/returnbookUI.png)
 
 ### 5. Delete Book
-![Delete Book](screenshots/deletebook.png)
+![Delete Book](screenshots/deletebookUI.png)

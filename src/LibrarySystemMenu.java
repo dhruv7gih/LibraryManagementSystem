@@ -18,23 +18,23 @@ public class LibrarySystemMenu {
 
             switch (choice) {
                 case 1:
-                    ViewBooks.main(null);
+                    new ViewBooksUI(); // ✅ instantiate instead of calling .main
                     break;
                 case 2:
-                    AddBook.main(null);
+                    new AddBookUI();
                     break;
                 case 3:
-                    DeleteBook.main(null);
+                    new DeleteBookUI();
                     break;
                 case 4:
-                    IssueBook.main(null);
+                    new IssueBookUI();
                     break;
                 case 5:
-                    ReturnBook.main(null);
+                    new ReturnBookUI();
                     break;
                 case 6:
                     System.out.println("Exiting program...");
-                    running = false;  // or use System.exit(0);
+                    running = false;
                     break;
                 default:
                     System.out.println("Invalid choice. Try again.");
